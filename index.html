@@ -1,0 +1,369 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Becklan Field App V4.0</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0A588C">
+  <link rel="icon" type="image/png" href="assets/icon.png" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <style>
+    :root{--blue:#0A588C;--green:#7BC043;--bg:#f4f6f8;--card:#fff;--border:#e6e6e6;--text:#0b1a26;--muted:#667085;--danger:#b00020;--ok:#0a7a2f;}
+    body{font-family:Arial,sans-serif;background:var(--bg);margin:0;color:var(--text)}
+    header{background:var(--blue);color:#fff;padding:12px 14px;display:flex;justify-content:space-between;align-items:center}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand img{width:36px;height:36px;border-radius:10px;background:#fff}
+    .brand .title{font-weight:800;line-height:1.1}
+    .brand .tag{font-size:12px;opacity:.95}
+    .hint{font-size:12px;color:#e7f3ff;opacity:.95}
+    .pill{display:inline-block;background:#eef6ff;border:1px solid #cfe6ff;padding:2px 8px;border-radius:999px;margin-left:6px;font-size:12px;color:var(--blue)}
+    .wrap{max-width:980px;margin:0 auto;padding:14px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    label{font-weight:700;font-size:13px}
+    input,select,textarea{width:100%;padding:10px;border-radius:10px;border:1px solid #bbb}
+    textarea{min-height:70px}
+    button{background:var(--blue);color:#fff;border:0;border-radius:12px;padding:11px 14px;font-weight:800;cursor:pointer}
+    button.secondary{background:var(--green);color:#083018}
+    button:disabled{background:#9fbad0;cursor:not-allowed}
+    .small{color:var(--muted);font-size:12px}
+    .list{border-top:1px solid #eee;margin-top:10px}
+    .item{padding:10px 0;border-bottom:1px solid #eee;cursor:pointer}
+    .ok{color:var(--ok)}
+    .bad{color:var(--danger)}
+    .inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .lock{padding:8px 10px;border:1px dashed #cbd5e1;border-radius:12px;background:#f8fafc}
+    .lock b{color:var(--blue)}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    .chip{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid #cfe6ff;background:#eef6ff;color:var(--blue)}
+  </style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <img src="assets/icon.png" alt="Becklan logo">
+    <div>
+      <div class="title">Becklan Field App <span class="pill">V4.0</span></div>
+      <div class="tag">Your Health. Our Priority.</div>
+      <div class="hint">Sales • Services • Treatments • Stock Search</div>
+    </div>
+  </div>
+  <div class="small" style="color:#fff;opacity:.9">Staff Entry</div>
+</header>
+
+<div class="wrap">
+
+  <div class="card" id="connectionCard">
+    <div class="topbar">
+      <h3 style="margin:0;">Connection</h3>
+      <span class="chip" id="connChip">Locked</span>
+    </div>
+
+    <div class="lock small" id="lockMsg" style="margin-top:10px;">
+      <b>Locked:</b> Confirm the Apps Script <b>/exec</b> URL and enter the <b>Field PIN</b>. Then click <b>Save Connection</b>.
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div>
+        <label>Apps Script Web App /exec URL</label>
+        <input id="execUrl" />
+        <div class="small">Pre-filled. Saved on this device after you press Save.</div>
+      </div>
+      <div>
+        <label>Field PIN</label>
+        <input id="pin" placeholder="Enter staff PIN" />
+        <div class="small">PIN required for Search & Submissions.</div>
+      </div>
+    </div>
+
+    <div class="inline" style="margin-top:10px;">
+      <button id="btnPing" type="button">Ping Server</button>
+      <button id="btnSave" class="secondary" type="button">Save Connection</button>
+      <button id="btnGo" type="button">Go to Forms</button>
+      <span id="status" class="small">Not connected</span>
+      <span id="help" class="small"></span>
+    </div>
+    <div class="small" style="margin-top:6px;">Fix included: avoids Apps Script CORS preflight AND fixes Ping button not responding.</div>
+  </div>
+
+  <div id="formsArea">
+    <div class="card" id="searchCard">
+      <h3 style="margin:0 0 10px 0;">Medication Search (Availability)</h3>
+      <div class="row">
+        <div>
+          <label>Search (min 3 letters or NDC)</label>
+          <input id="q" placeholder="e.g. amox or 123" />
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:10px;">
+          <button id="btnSearch" type="button" disabled>Search</button>
+          <span class="small">Tap result to fill Sale fields</span>
+        </div>
+      </div>
+      <div id="results" class="list"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 10px 0;">Record Sale</h3>
+      <div class="row">
+        <div><label>NDC</label><input id="saleNdc"></div>
+        <div><label>Quantity</label><input id="saleQty" type="number"></div>
+        <div><label>Unit Price (LE)</label><input id="salePrice" type="number"></div>
+        <div><label>Payment Method</label>
+          <select id="saleMethod"><option>Cash</option><option>Mobile Money</option><option>Card</option><option>Credit</option><option>Other</option></select>
+        </div>
+        <div><label>Customer</label><input id="saleCustomer"></div>
+        <div><label>Phone</label><input id="salePhone"></div>
+        <div><label>Staff Name</label><input id="staffName"></div>
+        <div><label>Staff ID</label><input id="staffId"></div>
+      </div>
+      <label style="margin-top:8px;display:block;">Notes</label>
+      <textarea id="saleNotes"></textarea>
+      <div style="margin-top:10px;">
+        <button id="btnSale" type="button" disabled>Submit Sale</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 10px 0;">Record Service</h3>
+      <div class="row">
+        <div><label>Service Type</label><input id="svcType"></div>
+        <div><label>Standard Fee (LE)</label><input id="svcFee" type="number"></div>
+        <div><label>Amount Paid (LE)</label><input id="svcPaid" type="number"></div>
+        <div><label>Payment Method</label>
+          <select id="svcMethod"><option>Cash</option><option>Mobile Money</option><option>Card</option><option>Credit</option><option>Other</option></select>
+        </div>
+        <div><label>Patient Name</label><input id="svcPatient"></div>
+        <div><label>Phone</label><input id="svcPhone"></div>
+      </div>
+      <label style="margin-top:8px;display:block;">Notes</label>
+      <textarea id="svcNotes"></textarea>
+      <div style="margin-top:10px;">
+        <button id="btnSvc" type="button" disabled>Submit Service</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 10px 0;">Record Treatment</h3>
+      <div class="row">
+        <div><label>Patient Name</label><input id="tPatient"></div>
+        <div><label>Age</label><input id="tAge" type="number"></div>
+        <div><label>Sex</label><input id="tSex" placeholder="M/F"></div>
+        <div><label>Clinician Name</label><input id="tClinician"></div>
+        <div><label>Clinician Role</label><input id="tRole"></div>
+        <div><label>Diagnosis</label><input id="tDx"></div>
+        <div><label>Procedure</label><input id="tProc"></div>
+        <div><label>Drugs Dispensed</label><input id="tDrugs"></div>
+        <div><label>Charged (LE)</label><input id="tCharged" type="number"></div>
+        <div><label>Paid (LE)</label><input id="tPaid" type="number"></div>
+        <div><label>Payment Method</label>
+          <select id="tMethod"><option>Cash</option><option>Mobile Money</option><option>Card</option><option>Credit</option><option>Other</option></select>
+        </div>
+      </div>
+      <label style="margin-top:8px;display:block;">Notes</label>
+      <textarea id="tNotes"></textarea>
+      <div style="margin-top:10px;">
+        <button id="btnTrt" type="button" disabled>Submit Treatment</button>
+      </div>
+    </div>
+
+    <div class="small" style="text-align:center;margin:10px 0 20px 0;">© Becklan Management System V4.0</div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const DEFAULT_EXEC_URL = "https://script.google.com/macros/s/AKfycbyuOYHM9Tpq88jK5pgxZKyXXJ9dTE1vanym0iXENv3PocF95RT65unun5q6RrxKR5Iw/exec";
+  const LS_EXEC = "becklan_exec_url_v4";
+  const LS_PIN  = "becklan_field_pin_v4";
+
+  const elExec = document.getElementById("execUrl");
+  const elPin  = document.getElementById("pin");
+  const elStatus = document.getElementById("status");
+  const elHelp = document.getElementById("help");
+  const elConnCard = document.getElementById("connectionCard");
+  const elLockMsg = document.getElementById("lockMsg");
+  const elChip = document.getElementById("connChip");
+
+  const btnPing = document.getElementById("btnPing");
+  const btnSave = document.getElementById("btnSave");
+  const btnGo   = document.getElementById("btnGo");
+  const btnSearch = document.getElementById("btnSearch");
+  const btnSale = document.getElementById("btnSale");
+  const btnSvc  = document.getElementById("btnSvc");
+  const btnTrt  = document.getElementById("btnTrt");
+
+  const q = document.getElementById("q");
+  const results = document.getElementById("results");
+
+  function setChip(text, ok){
+    elChip.textContent = text;
+    elChip.style.borderColor = ok ? "#bfe8c8" : "#cfe6ff";
+    elChip.style.background = ok ? "#eaf8ef" : "#eef6ff";
+    elChip.style.color = ok ? "#0a7a2f" : "#0A588C";
+  }
+
+  function isUnlocked(){
+    return elExec.value.trim().length > 0 && elPin.value.trim().length > 0;
+  }
+
+  function updateLockState(){
+    const unlocked = isUnlocked();
+    [btnSearch,btnSale,btnSvc,btnTrt].forEach(b => b.disabled = !unlocked);
+    elLockMsg.style.display = unlocked ? "none" : "block";
+    setChip(unlocked ? "Ready to Verify" : "Locked", unlocked);
+  }
+
+  async function api(payload){
+    if(!isUnlocked()) throw new Error("Locked: set /exec URL and enter Field PIN.");
+    const execUrl = elExec.value.trim();
+
+    const res = await fetch(execUrl, {
+      method: "POST",
+      mode: "cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, // avoids preflight
+      body: JSON.stringify(payload)
+    });
+
+    const txt = await res.text();
+    if (txt.trim().startsWith("<!DOCTYPE") || txt.trim().startsWith("<html")) {
+      throw new Error("Web App returned HTML (deployment/access issue). Use the /exec URL and redeploy with access Anyone.");
+    }
+    let data;
+    try { data = JSON.parse(txt); } catch(e) {
+      throw new Error("Invalid JSON from server. First 120 chars: " + txt.slice(0,120));
+    }
+    if(!data.ok) throw new Error(data.error || "Request failed");
+    return data;
+  }
+
+  async function autoUnlock(showAlert){
+    elHelp.textContent = "";
+    if(!isUnlocked()){ setChip("Locked", false); return; }
+    try{
+      const d = await api({action:"ping"});
+      elStatus.textContent = "Connected @ " + d.at;
+      elStatus.className = "small ok";
+      setChip("Connected", true);
+      elConnCard.style.display = "none";
+      document.getElementById("searchCard").scrollIntoView({behavior:"smooth"});
+    }catch(e){
+      elStatus.textContent = "Not connected";
+      elStatus.className = "small bad";
+      elHelp.textContent = e.message;
+      setChip("Needs Deploy Fix", false);
+      if(showAlert) alert(e.message);
+    }
+  }
+
+  async function searchStock(){
+    results.innerHTML = "";
+    try{
+      const d = await api({action:"searchStock", pin: elPin.value.trim(), q: q.value.trim()});
+      const list = (d.items||[]).map(it => `
+        <div class="item" data-ndc="${it.ndc||""}" data-price="${it.sellingPriceLe||""}">
+          <div><b>${it.product}</b> (${it.strength||""})</div>
+          <div class="small">NDC: ${it.ndc} • In stock: ${it.qtyInStock} • Price: ${it.sellingPriceLe} • Exp: ${it.expiryDate||"-"}</div>
+        </div>`).join("");
+      results.innerHTML = list || "<div class='small' style='padding:10px 0;'>No results</div>";
+      results.querySelectorAll(".item").forEach(el=>{
+        el.addEventListener("click", ()=>{
+          document.getElementById("saleNdc").value = el.getAttribute("data-ndc") || "";
+          document.getElementById("salePrice").value = el.getAttribute("data-price") || "";
+          q.value = "";
+          results.innerHTML = "";
+        });
+      });
+    }catch(e){
+      results.innerHTML = "<div class='small bad' style='padding:10px 0;'>" + e.message + "</div>";
+    }
+  }
+
+  async function submitSale(){
+    const pin = elPin.value.trim();
+    const sale = {
+      ndc: document.getElementById("saleNdc").value.trim(),
+      quantity: Number(document.getElementById("saleQty").value || 0),
+      unitPriceLe: Number(document.getElementById("salePrice").value || 0),
+      customer: document.getElementById("saleCustomer").value,
+      phone: document.getElementById("salePhone").value,
+      paymentMethod: document.getElementById("saleMethod").value,
+      staffName: document.getElementById("staffName").value,
+      staffId: document.getElementById("staffId").value,
+      notes: document.getElementById("saleNotes").value
+    };
+    const d = await api({action:"recordSale", pin, sale});
+    alert("Sale saved. Receipt: " + d.receiptNo);
+  }
+
+  async function submitService(){
+    const pin = elPin.value.trim();
+    const service = {
+      serviceType: document.getElementById("svcType").value,
+      standardFeeLe: Number(document.getElementById("svcFee").value || 0),
+      amountPaidLe: Number(document.getElementById("svcPaid").value || 0),
+      paymentMethod: document.getElementById("svcMethod").value,
+      patientName: document.getElementById("svcPatient").value,
+      phone: document.getElementById("svcPhone").value,
+      staffName: document.getElementById("staffName").value,
+      staffId: document.getElementById("staffId").value,
+      notes: document.getElementById("svcNotes").value
+    };
+    const d = await api({action:"recordService", pin, service});
+    alert("Service saved. Receipt: " + d.receiptNo);
+  }
+
+  async function submitTreatment(){
+    const pin = elPin.value.trim();
+    const treatment = {
+      patientName: document.getElementById("tPatient").value,
+      age: document.getElementById("tAge").value,
+      sex: document.getElementById("tSex").value,
+      diagnosis: document.getElementById("tDx").value,
+      procedure: document.getElementById("tProc").value,
+      drugsDispensed: document.getElementById("tDrugs").value,
+      amountChargedLe: Number(document.getElementById("tCharged").value || 0),
+      amountPaidLe: Number(document.getElementById("tPaid").value || 0),
+      paymentMethod: document.getElementById("tMethod").value,
+      clinicianName: document.getElementById("tClinician").value,
+      clinicianRole: document.getElementById("tRole").value,
+      notes: document.getElementById("tNotes").value,
+      recordedBy: document.getElementById("staffName").value || document.getElementById("tClinician").value
+    };
+    const d = await api({action:"recordTreatment", pin, treatment});
+    alert("Treatment saved. Receipt: " + d.receiptNo + "\\nBalance Due: " + d.balanceDueLe);
+  }
+
+  // events
+  btnPing.addEventListener("click", ()=>autoUnlock(true));
+  btnSave.addEventListener("click", ()=>{
+    localStorage.setItem(LS_EXEC, elExec.value.trim());
+    localStorage.setItem(LS_PIN, elPin.value.trim());
+    updateLockState();
+    autoUnlock(true);
+  });
+  btnGo.addEventListener("click", ()=>document.getElementById("searchCard").scrollIntoView({behavior:"smooth"}));
+  btnSearch.addEventListener("click", searchStock);
+  btnSale.addEventListener("click", ()=>submitSale().catch(e=>alert(e.message)));
+  btnSvc.addEventListener("click", ()=>submitService().catch(e=>alert(e.message)));
+  btnTrt.addEventListener("click", ()=>submitTreatment().catch(e=>alert(e.message)));
+
+  q.addEventListener("input", ()=>{
+    if(!isUnlocked()){ results.innerHTML=""; return; }
+    if(q.value.trim().length >= 3) searchStock();
+    else results.innerHTML = "";
+  });
+
+  elExec.addEventListener("input", updateLockState);
+  elPin.addEventListener("input", updateLockState);
+
+  // init
+  elExec.value = localStorage.getItem(LS_EXEC) || DEFAULT_EXEC_URL;
+  elPin.value = localStorage.getItem(LS_PIN) || "";
+  updateLockState();
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+  window.addEventListener("load", ()=>autoUnlock(false));
+})();
+</script>
+</body>
+</html>
